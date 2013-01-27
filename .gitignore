@@ -1,0 +1,8 @@
+# object/rando files
+*.o
+*.d
+*.gen.cpp
+*.gen.h
+
+# binary
+*.elf
