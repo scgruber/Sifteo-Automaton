@@ -10,6 +10,8 @@ using namespace Sifteo;
 
 static const unsigned gCubeCt = 3;
 Random gRandom;
+unsigned gInitialCells = 64;
+SystemTime gLastTime;
 
 static AssetSlot MainSlot = AssetSlot::allocate()
   .bootstrap(GameAssets);
@@ -44,32 +46,43 @@ public:
   }
 
   void switchMaps() {
+    unsigned counter = 0;
     for (unsigned i=0; i<256; i++) {
+      if (curMap[i]) counter++;
       oldMap[i] = curMap[i];
       curMap[i] = false;
     }
+    LOG("Switched maps\n");
+    LOG("  detected %d cells\n", counter);
   }
 
   void update() {
     for (unsigned y=0; y<16; y++) {
       for (unsigned x=0; x<16; x++) {
         if (!terMap[y*16+x]) {
-          if (countNeighbors(x,y) >= 3) curMap[y*16+x] = true;
+          if (oldMap[y*16+x]) {
+            if (countNeighbors(x,y) == 2 || countNeighbors(x,y) == 3)
+              curMap[y*16+x] = true;
+          } else {
+            if (countNeighbors(x,y) == 3) curMap[y*16+x] = true;
+          }
         }
       }
     }
+    LOG("Updated map\n");
   }
 
   void draw() {
-    vid.bg0.erase(Ground);
     for (unsigned i=0; i<256; i++) {
+      drawCoords.y = i/16;
+      drawCoords.x = i%16;
       if (curMap[i]) {
-        drawCoords.y = i/16;
-        drawCoords.x = i%16;
         vid.bg0.image(drawCoords, Cell);
-        LOG("Drew cell at (%d,%d)",drawCoords.x,drawCoords.y);
+      } else {
+        vid.bg0.image(drawCoords, Ground);
       }
     }
+    LOG("Drew map\n\n");
   }
 private:
   VideoBuffer vid;
@@ -100,18 +113,25 @@ private:
 
 void main()
 {
+  gLastTime = SystemTime::now();
+  
   static Automaton cubes[gCubeCt];
   for (unsigned i=0; i<gCubeCt; i++) {
-    cubes[i].init(i,25);
+    cubes[i].init(i,gInitialCells);
   }
 
   // Main loop
   while (1) {
-    for (unsigned i=0; i<gCubeCt; i++) {
-//      cubes[i].switchMaps();
-//      cubes[i].update();
-      cubes[i].draw();
-      LOG("Drew Cube #%d\n\n",i);
+    SystemTime rightNow = SystemTime::now();
+    if ((rightNow - gLastTime) > 0.5) {
+      gLastTime = SystemTime::now();
+
+      for (unsigned i=0; i<gCubeCt; i++) {
+        LOG("Eval for cube #%d:\n", i);
+        cubes[i].switchMaps();
+        cubes[i].update();
+        cubes[i].draw();
+      }
     }
 
     System::paint();
