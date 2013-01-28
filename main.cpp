@@ -47,6 +47,18 @@ public:
     }
   }
 
+  void add(unsigned ct) {
+    while (ct != 0) {
+      unsigned rX = gRandom.randint(0,15);
+      unsigned rY = gRandom.randint(0,15);
+
+      if (!curMap[rY*16+rX]) {
+        curMap[rY*16+rX] = true;
+        ct--;
+      }
+    }
+  }
+
   void switchMaps() {
     unsigned counter = 0;
     for (unsigned i=0; i<256; i++) {
@@ -119,6 +131,26 @@ private:
 
     return ct;
   }
+
+};
+
+class Listener {
+public:
+  void init(Automaton* cubes) {
+    cubeArray = cubes;
+    Events::cubeTouch.set(&Listener::onTouch, this);
+  }
+
+private:
+  Automaton* cubeArray;
+  void onTouch(unsigned id) {
+    CubeID cube(id);
+    cubeArray[id].add(gInitialCells);
+#ifdef _DEBUG
+    LOG("Recieved touch event");
+#endif
+  }
+
 };
 
 void main()
@@ -126,6 +158,8 @@ void main()
   gLastTime = SystemTime::now();
   
   static Automaton cubes[gCubeCt];
+  static Listener listen;
+  listen.init(cubes);
   for (unsigned i=0; i<gCubeCt; i++) {
     cubes[i].init(i,gInitialCells);
   }
