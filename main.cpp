@@ -24,11 +24,16 @@ static Metadata M = Metadata()
   .icon(Icon)
   .cubeRange(gCubeCt);
 
+
 class Automaton {
 public:
+  enum Dir { None=0, Up=1, Down=2, Left=3, Right=4 };
+  
   void init(CubeID cube, unsigned startct) {
     vid.initMode(BG0_BG1);
     vid.attach(cube);
+
+    accelDir = None;
     
     for (unsigned i=0; i<256; i++) {
       terMap[i] = false;
@@ -57,6 +62,65 @@ public:
         ct--;
       }
     }
+  }
+
+  void setAccel(Dir d) {
+    accelDir = d;
+  }
+
+  void tilt() {
+    switch (accelDir) {
+      case Up:
+        for (int y=1; y<16; y++) {
+          for (int x=0; x<16; x++) {
+            if (curMap[y*16+x]) {
+              if (!curMap[(y-1)*16+x]) {
+                curMap[(y-1)*16+x] = true;
+                curMap[y*16+x] = false;
+              }
+            }
+          }
+        }
+        break;
+      case Down:
+        for (int y=0; y<15; y++) {
+          for (int x=0; x<16; x++) {
+            if (curMap[y*16+x]) {
+              if (!curMap[(y+1)*16+x]) {
+                curMap[(y+1)*16+x] = true;
+                curMap[y*16+x] = false;
+              }
+            }
+          }
+        }
+        break;
+      case Left:
+        for (int y=0; y<16; y++) {
+          for (int x=1; x<16; x++) {
+            if (curMap[y*16+x]) {
+              if (!curMap[y*16+(x-1)]) {
+                curMap[y*16+(x-1)] = true;
+                curMap[y*16+x] = false;
+              }
+            }
+          }
+        }
+        break;
+      case Right:
+        for (int y=0; y<16; y++) {
+          for (int x=0; x<15; x++) {
+            if (curMap[y*16+x]) {
+              if (!curMap[y*16+(x+1)]) {
+                curMap[y*16+(x+1)] = true;
+                curMap[y*16+x] = false;
+              }
+            }
+          }
+        }
+        break;
+      default: break;
+    }
+    accelDir = None;
   }
 
   void switchMaps() {
@@ -114,6 +178,8 @@ private:
   bool curMap[256];
   bool oldMap[256];
 
+  Dir accelDir;
+
   unsigned countNeighbors(unsigned x, unsigned y) {
     unsigned ct = 0;
 
@@ -139,15 +205,33 @@ public:
   void init(Automaton* cubes) {
     cubeArray = cubes;
     Events::cubeTouch.set(&Listener::onTouch, this);
+    Events::cubeAccelChange.set(&Listener::onAccel, this);
   }
 
 private:
   Automaton* cubeArray;
+
   void onTouch(unsigned id) {
-    CubeID cube(id);
     cubeArray[id].add(gInitialCells);
 #ifdef _DEBUG
-    LOG("Recieved touch event");
+    LOG("Recieved touch event\n");
+#endif
+  }
+
+  void onAccel(unsigned id) {
+    CubeID cube(id);
+    if (cube.accel().x < -16) {
+      cubeArray[id].setAccel(Automaton::Left);
+    } else if (cube.accel().x > 16) {
+      cubeArray[id].setAccel(Automaton::Right);
+    }
+    if (cube.accel().y < -16) {
+      cubeArray[id].setAccel(Automaton::Up);
+    } else if (cube.accel().y > 16) {
+      cubeArray[id].setAccel(Automaton::Down);
+    }
+#ifdef _DEBUG
+    LOG("Received accel event\n");
 #endif
   }
 
@@ -174,6 +258,7 @@ void main()
         LOG("Eval for cube #%d:\n", i);
         cubes[i].switchMaps();
         cubes[i].update();
+        cubes[i].tilt();
         cubes[i].draw();
       }
     }
