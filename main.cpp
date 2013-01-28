@@ -8,6 +8,8 @@
 #include "assets.gen.h"
 using namespace Sifteo;
 
+#define _DEBUG
+
 static const unsigned gCubeCt = 3;
 Random gRandom;
 unsigned gInitialCells = 64;
@@ -52,8 +54,10 @@ public:
       oldMap[i] = curMap[i];
       curMap[i] = false;
     }
+#ifdef _DEBUG
     LOG("Switched maps\n");
     LOG("  detected %d cells\n", counter);
+#endif
   }
 
   void update() {
@@ -69,7 +73,9 @@ public:
         }
       }
     }
+#ifdef _DEBUG
     LOG("Updated map\n");
+#endif
   }
 
   void draw() {
@@ -82,8 +88,12 @@ public:
         vid.bg0.image(drawCoords, Ground);
       }
     }
+#ifdef _DEBUG
     LOG("Drew map\n\n");
+#endif
   }
+
+
 private:
   VideoBuffer vid;
   UInt2 drawCoords;
