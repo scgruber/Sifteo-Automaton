@@ -6,3 +6,6 @@
 
 # binary
 *.elf
+
+# Stupid Vim Swaps
+*.swp
